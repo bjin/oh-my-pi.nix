@@ -1,7 +1,7 @@
 {
-  "version": "18.1.12",
-  "rev": "4f429faef639d182633d1cb3f6a15254adcf25c1",
-  "hash": "sha256-iQY4TiaZU6Uom89DsJfek/65KeqkB0hpx1XW3OZWqm8=",
+  "version": "18.1.13",
+  "rev": "a1b254047d12e143b7c6011536e918c6c35c5906",
+  "hash": "sha256-lDnNKP2CvnLmrFu2j5L6PzkaQ4OfANGOZjygLdRiNLY=",
   "bunVersion": "1.3.14",
   "rustToolchainChannel": "nightly-2026-08-08",
   "patchedDependencies": {
