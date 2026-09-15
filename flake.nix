@@ -156,6 +156,26 @@
           --replace-fail 'import chalk from "chalk";' \
             'import chalk from "@oh-my-pi/pi-utils/chalk";'
       '';
+      # 18.2.0 compiles the bundle to JSC bytecode (`compile-binary.ts`: +52 MiB
+      # of binary for a cold start upstream measures at 30 ms instead of 256
+      # ms). The binary this build produces from it never reaches `main`: every
+      # invocation dies with `TypeError: Expected CommonJS module to have a
+      # function wrapper`, which is where Bun lands when a bytecode-compiled CJS
+      # module arrives without usable bytecode. A minimal bundle compiled
+      # through the same runtime template survives everything this derivation
+      # does to the finished binary afterwards — `remove-references-to` over the
+      # payload, then patchelf onto the Nix loader — so the trigger is specific
+      # to the real module graph; and neither step is optional, since an
+      # unpatched Bun release binary has no interpreter that exists on NixOS.
+      # Ship the parsed bundle: slower boot, a binary that runs.
+      #
+      # Retire once a Bun release runs its own bytecode out of a standalone
+      # payload that was written into a template and patched afterwards
+      # (oven-sh/bun#31023, oven-sh/bun#31024).
+      dropCompiledBytecode = ''
+        substituteInPlace packages/coding-agent/scripts/compile-binary.ts \
+          --replace-fail 'bytecode: true,' 'bytecode: false,'
+      '';
       commonMeta = {
         description = "AI coding agent for the terminal";
         homepage = "https://github.com/can1357/oh-my-pi";
@@ -182,9 +202,6 @@
         # pcre2-sys links a pkg-config libpcre2 when it finds one; upstream
         # release builds force the vendored static build instead.
         export PCRE2_SYS_STATIC=1
-        # `audiopus_sys`' bundled opus fallback declares a
-        # cmake_minimum_required below what CMake 4.x accepts unaided.
-        export CMAKE_POLICY_VERSION_MINIMUM=3.5
       ''
       + lib.concatStrings (
         lib.mapAttrsToList (variant: targetCpu: ''
@@ -327,23 +344,26 @@
           pkgs.autoPatchelfHook
           pkgs.bun
           pkgs.bun2nix.hook
-          # `audiopus_sys` builds its vendored static libopus fallback with CMake.
+          # `opusic-sys` — the `-sys` layer under the `opus` crate — has no
+          # system-libopus path: its default `bundled` feature always compiles
+          # and statically links the libopus it vendors, with CMake.
           pkgs.cmake
           pkgs.installShellFiles
+          # Upstream's `.cargo/config.toml` pins `CMAKE_GENERATOR=Ninja` for the
+          # whole workspace, so every cmake-rs build script configures with `-G
+          # Ninja` and dies unless that generator's build program is on PATH.
+          pkgs.ninja
           pkgs.pkg-config
           pkgs.removeReferencesTo
           toolchainWithTarget
           rustPlatform.cargoSetupHook
-          # `maudio-sys` generates bindings with libclang; this hook also provides
-          # its Nix libc include flags.
+          # `pipewire-sys` and `libspa-sys` generate bindings with libclang; this
+          # hook also provides their Nix libc include flags.
           rustPlatform.bindgenHook
         ];
 
         buildInputs = [
           pkgs.stdenv.cc.cc.lib
-          # `audiopus_sys` enables its `static` feature; pkg-config locates this
-          # libopus archive instead of falling back to the bundled CMake build.
-          pkgs.opus
           pkgs.zlib
           # `pi-natives`' `wayland-pipewire` feature links system libpipewire
           # through pkg-config.
@@ -351,7 +371,7 @@
         ];
         strictDeps = true;
         dontConfigure = true;
-        # CMake belongs to `audiopus_sys`, not this derivation's source root.
+        # CMake belongs to `opusic-sys`, not this derivation's source root.
         dontUseCmakeConfigure = true;
         dontStrip = true;
         # Nix builders cannot hardlink cache files into node_modules.
@@ -367,7 +387,7 @@
           BUN_COMPILE_EXECUTABLE_PATH = "${bunRuntimeTemplate}/libexec/bun";
         };
 
-        postPatch = useLooseNativeAddons + useInternalChalk;
+        postPatch = useLooseNativeAddons + useInternalChalk + dropCompiledBytecode;
 
         buildPhase = ''
           runHook preBuild

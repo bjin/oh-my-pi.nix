@@ -1,9 +1,9 @@
 {
-  "version": "18.1.22",
-  "rev": "23a5b9ae38864d3f785dc6cbc96eb6d674a1d32d",
-  "hash": "sha256-8L9ioTPKs6eA81J1ELRk9XJzQ7MLAQBwNJD6u//gr4s=",
+  "version": "18.2.0",
+  "rev": "6f2c14b3e4cc065139789da893e4f86f3d72958c",
+  "hash": "sha256-eWzZ8cWG4J9tz9QWNqDv76pLdzLyg9bcEDKfespuDv4=",
   "bunVersion": "1.3.14",
-  "rustToolchainChannel": "nightly-2026-08-08",
+  "rustToolchainChannel": "nightly-2026-08-12",
   "patchedDependencies": {
     "@ark/schema@0.56.2": "@ark%2Fschema@0.56.2.patch",
     "puppeteer-core@25.3.0": "puppeteer-core@25.3.0.patch"
