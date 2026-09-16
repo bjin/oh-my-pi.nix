@@ -134,27 +134,8 @@
         # loader then falls back to those loose files from process.execPath's
         # directory.
         substituteInPlace packages/natives/scripts/embed-native.ts \
-          --replace-fail 'const reset = process.argv.includes("--reset");' \
-            'const reset = true;'
-      '';
-      # `collab-cli.ts` is the one file in the tree that imports the npm
-      # `chalk`; the ~60 other call sites import `@oh-my-pi/pi-utils/chalk`,
-      # the behaviour-compatible reimplementation that lives in the repository.
-      # No workspace manifest declares `chalk`, so that import resolves only
-      # where a hoisted `node_modules` lifts chalk@4.1.2 to the root as a
-      # transitive dependency of the `@typescript/analyze-trace` devtool.
-      # bun2nix installs with `--linker=isolated`, which gives every package
-      # exactly its declared dependencies, so the phantom import surfaces as
-      # `Could not resolve: "chalk"` out of `Bun.build`. Point it at the sibling
-      # module the rest of the tree uses.
-      #
-      # Drop this once can1357/oh-my-pi#12003 lands upstream; until then
-      # `--replace-fail` is what makes the patch retire itself loudly rather
-      # than silently going stale.
-      useInternalChalk = ''
-        substituteInPlace packages/coding-agent/src/cli/collab-cli.ts \
-          --replace-fail 'import chalk from "chalk";' \
-            'import chalk from "@oh-my-pi/pi-utils/chalk";'
+          --replace-fail 'process.argv.includes("--reset")' \
+            'true'
       '';
       # 18.2.0 compiles the bundle to JSC bytecode (`compile-binary.ts`: +52 MiB
       # of binary for a cold start upstream measures at 30 ms instead of 256
@@ -387,7 +368,7 @@
           BUN_COMPILE_EXECUTABLE_PATH = "${bunRuntimeTemplate}/libexec/bun";
         };
 
-        postPatch = useLooseNativeAddons + useInternalChalk + dropCompiledBytecode;
+        postPatch = useLooseNativeAddons + dropCompiledBytecode;
 
         buildPhase = ''
           runHook preBuild
