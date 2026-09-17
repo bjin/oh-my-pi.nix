@@ -122,17 +122,22 @@ def resolve_target_tag(raw_version: str | None) -> tuple[str, str, str]:
     return tag, tag.removeprefix("v"), rev
 
 
-def read_pin() -> tuple[str, str]:
+def read_pin() -> tuple[str, str, str]:
     pin = json.loads(HASHES_PATH.read_text())
     if not isinstance(pin, dict):
         raise SystemExit("hashes.json is not a JSON object")
     version = pin.get("version")
     rev = pin.get("rev")
+    bun_version = pin.get("bunVersion")
     if not isinstance(version, str) or not version:
         raise SystemExit("hashes.json is missing version")
     if not isinstance(rev, str) or not re.fullmatch(r"[0-9a-f]{40}", rev):
         raise SystemExit("hashes.json is missing a 40-character rev")
-    return version, rev
+    if not isinstance(bun_version, str) or not re.fullmatch(
+        r"\d+\.\d+\.\d+", bun_version
+    ):
+        raise SystemExit("hashes.json is missing an x.y.z bunVersion")
+    return version, rev, bun_version
 
 
 def download_source(rev: str, work: Path) -> Path:
@@ -173,16 +178,46 @@ def read_json(path: Path) -> dict:
     return data
 
 
-def read_bun_version(tree: Path) -> str:
-    # The build pins Bun to this exact release rather than treating the floor as
-    # a range; flake.nix explains why.
-    spec = read_json(tree / "packages/utils/package.json").get("engines", {}).get("bun")
+def parse_bun_floor(label: str, spec: object, prefix: str = "") -> tuple[int, ...]:
     if not isinstance(spec, str):
-        raise SystemExit("upstream release does not declare engines.bun")
-    match = re.fullmatch(r">=(\d+\.\d+\.\d+)", spec.strip())
+        raise SystemExit(f"upstream release does not declare {label}")
+    text = spec.strip().removeprefix(prefix) if prefix else spec.strip()
+    match = re.fullmatch(r">=\s*(\d+(?:\.\d+){0,2})", text)
     if match is None:
-        raise SystemExit(f"unrecognised engines.bun specifier: {spec}")
-    return match.group(1)
+        raise SystemExit(f"unrecognised {label} specifier: {spec}")
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def read_bun_floors(tree: Path) -> dict[str, tuple[int, ...]]:
+    # Both floors bind the one Bun this build uses: `engines.bun` is the runtime
+    # minimum for the interpreter the binary embeds, `packageManager` the
+    # toolchain minimum upstream builds with. flake.nix explains why both bind.
+    engines = read_json(tree / "packages/utils/package.json").get("engines")
+    return {
+        "engines.bun": parse_bun_floor(
+            "engines.bun", engines.get("bun") if isinstance(engines, dict) else None
+        ),
+        "packageManager": parse_bun_floor(
+            "packageManager", read_json(tree / "package.json").get("packageManager"), "bun@"
+        ),
+    }
+
+
+def check_bun_pin(pinned: str, floors: dict[str, tuple[int, ...]]) -> None:
+    # The pin is a reviewed constant, not something derived from the release
+    # being pulled in, so an update only has to notice when a floor passes it.
+    version = tuple(int(part) for part in pinned.split("."))
+    unmet = sorted(
+        (label, ".".join(str(part) for part in floor))
+        for label, floor in floors.items()
+        if version < floor
+    )
+    if unmet:
+        raise SystemExit(
+            f"hashes.json pins Bun {pinned}, below "
+            + ", ".join(f"{label} >={floor}" for label, floor in unmet)
+            + "; raise bunVersion to the newest nix-bun versions/*.json that clears every floor"
+        )
 
 
 def read_rust_toolchain_channel(tree: Path) -> str:
@@ -339,10 +374,8 @@ def verify_haskell_crash_regression() -> None:
 
 
 def verify_embedded_bun_runtime() -> None:
-    # The standalone binary is written into a pristine release of the Bun that
-    # upstream's engines.bun asks for. Without that template the CLI still
-    # starts, but every `Bun.Image` caller (image resize, PNG conversion, kitty
-    # rendering) silently degrades.
+    # The binary embeds the Bun that built it. A wrong one still starts the CLI,
+    # but every `Bun.Image` caller (resize, PNG, kitty rendering) degrades.
     output = run_omp_isolated(
         "-e",
         "console.log(`${Bun.version} ${typeof Bun.Image}`)",
@@ -412,7 +445,7 @@ def main() -> int:
 
     require_clean_git_tree()
 
-    previous_version, previous_rev = read_pin()
+    previous_version, previous_rev, bun_version = read_pin()
     tag, version, rev = resolve_target_tag(args.version)
 
     if rev == previous_rev:
@@ -434,11 +467,12 @@ def main() -> int:
             raise SystemExit(
                 f"upstream tag {tag} ships version {source_version}, not {version}"
             )
+        check_bun_pin(bun_version, read_bun_floors(tree))
         write_pin(
             version,
             rev,
             hash_source(tree),
-            read_bun_version(tree),
+            bun_version,
             read_rust_toolchain_channel(tree),
             vendor_upstream_files(tree, read_patched_dependencies(tree)),
         )

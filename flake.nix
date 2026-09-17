@@ -48,10 +48,16 @@
       srcData = builtins.fromJSON (builtins.readFile ./hashes.json);
       sourceVersion = srcData.version;
 
-      # `cli.ts` enforces `engines.bun` at startup and every `Bun.Image` caller
-      # relies on it unguarded, so the entire build runs on exactly that Bun
-      # release; nixpkgs' bun trails it (1.3.13 against a >=1.3.14 floor).
-      # `scripts/update.py` resolves that floor to the version it records here.
+      # One Bun release runs the build and is embedded in the binary, so the pin
+      # must clear both floors upstream declares: `engines.bun` (>=1.3.14), which
+      # `cli.ts` enforces at startup for its unguarded `Bun.Image` calls, and the
+      # root `packageManager` (bun@>=1.4). The latter is load bearing —
+      # `bytecode: true` in `compile-binary.ts` switches Bun's output format to
+      # CommonJS, and only 1.4 lowers this graph's `import.meta.resolve` out of
+      # that program wrapper; 1.3.x emits no bytecode and dies before `main`
+      # with `TypeError: Expected CommonJS module to have a function wrapper`.
+      # nixpkgs' bun (1.3.13) clears neither floor, hence nix-bun;
+      # `scripts/update.py` rechecks the pin on every update.
       requiredBunVersion = srcData.bunVersion;
       bunSourcesFile = nix-bun + "/versions/${requiredBunVersion}.json";
 
@@ -137,25 +143,17 @@
           --replace-fail 'process.argv.includes("--reset")' \
             'true'
       '';
-      # 18.2.0 compiles the bundle to JSC bytecode (`compile-binary.ts`: +52 MiB
-      # of binary for a cold start upstream measures at 30 ms instead of 256
-      # ms). The binary this build produces from it never reaches `main`: every
-      # invocation dies with `TypeError: Expected CommonJS module to have a
-      # function wrapper`, which is where Bun lands when a bytecode-compiled CJS
-      # module arrives without usable bytecode. A minimal bundle compiled
-      # through the same runtime template survives everything this derivation
-      # does to the finished binary afterwards — `remove-references-to` over the
-      # payload, then patchelf onto the Nix loader — so the trigger is specific
-      # to the real module graph; and neither step is optional, since an
-      # unpatched Bun release binary has no interpreter that exists on NixOS.
-      # Ship the parsed bundle: slower boot, a binary that runs.
-      #
-      # Retire once a Bun release runs its own bytecode out of a standalone
-      # payload that was written into a template and patched afterwards
-      # (oven-sh/bun#31023, oven-sh/bun#31024).
-      dropCompiledBytecode = ''
-        substituteInPlace packages/coding-agent/scripts/compile-binary.ts \
-          --replace-fail 'bytecode: true,' 'bytecode: false,'
+      # `bun2nix`'s hook runs `patchShebangs .`, so `cli.ts` carries
+      # `#!${pkgs.bun}/bin/bun` by the time Bun bundles it, and Bun copies the
+      # entry shebang verbatim into the payload — a store reference in a binary
+      # that never execs it. Drop the line instead of rewriting the finished
+      # payload: `remove-references-to` edits the embedded source JSC keys its
+      # bytecode cache on (the 1.4 CommonJS payload survives it, the ESM one
+      # does not), and a rejected cache still starts, just 7x slower. `//` keeps
+      # the line numbering stack traces report.
+      stripEntrypointShebang = ''
+        substituteInPlace packages/coding-agent/src/cli.ts \
+          --replace-fail '#!/usr/bin/env bun' '//'
       '';
       commonMeta = {
         description = "AI coding agent for the terminal";
@@ -242,31 +240,6 @@
         rustc = toolchainWithTarget;
       };
 
-      # Bun's standalone writer corrupts patchelf'd templates until
-      # oven-sh/bun#31024 ships (oven-sh/bun#31023), so the payload is written
-      # into the pristine release binary from the same Bun the build runs on.
-      bunRuntimeTemplate = pkgs.stdenvNoCC.mkDerivation {
-        pname = "omp-bun-runtime-template";
-        inherit (pkgs.bun) version;
-        src = pkgs.bun.src;
-
-        nativeBuildInputs = [ pkgs.unzip ];
-        strictDeps = true;
-        dontUnpack = true;
-        dontConfigure = true;
-        dontBuild = true;
-        dontFixup = true;
-
-        installPhase = ''
-          runHook preInstall
-
-          unzip -q "$src"
-          install -Dm755 bun-*/bun "$out/libexec/bun"
-
-          runHook postInstall
-        '';
-      };
-
       # `fetchBunDeps` hands the file to `pkgs.callPackage`, whose autofill
       # supplies `copyPathToStore` — an eval-time `builtins.path`. Upstream
       # applies it to every workspace member through a path relative to
@@ -335,7 +308,6 @@
           # Ninja` and dies unless that generator's build program is on PATH.
           pkgs.ninja
           pkgs.pkg-config
-          pkgs.removeReferencesTo
           toolchainWithTarget
           rustPlatform.cargoSetupHook
           # `pipewire-sys` and `libspa-sys` generate bindings with libclang; this
@@ -362,13 +334,7 @@
         ];
         dontRunLifecycleScripts = true;
 
-        env = {
-          # Upstream reads this in `packages/coding-agent/scripts/build-binary.ts`
-          # and hands it to `Bun.build`'s `compile.executablePath`.
-          BUN_COMPILE_EXECUTABLE_PATH = "${bunRuntimeTemplate}/libexec/bun";
-        };
-
-        postPatch = useLooseNativeAddons + dropCompiledBytecode;
+        postPatch = useLooseNativeAddons + stripEntrypointShebang;
 
         buildPhase = ''
           runHook preBuild
@@ -401,24 +367,16 @@
           runHook postInstall
         '';
 
-        # Bun's bundler stamps the building interpreter's shebang
-        # (`#!${pkgs.bun}/bin/bun`) onto the embedded entry module, which the
-        # reference scanner turns into a runtime dependency on a Bun the
-        # standalone binary never executes. Strip it before fixup; the mangled
-        # shebang stays inert and `disallowedReferences` catches regressions.
         preFixup = ''
-          remove-references-to -t ${pkgs.bun} "$out/lib/omp/omp"
-
           ohMyPiPostFixup() {
             ${addonAudioRunpath}
             ${installShellCompletions}
           }
           postFixupHooks+=(ohMyPiPostFixup)
         '';
-        disallowedReferences = [
-          pkgs.bun
-          bunRuntimeTemplate
-        ];
+        # Without the entry shebang the payload holds no store path at all, so a
+        # reappearing Bun reference means the shebang came back.
+        disallowedReferences = [ pkgs.bun ];
 
         doInstallCheck = true;
         installCheckPhase = ''
@@ -438,6 +396,15 @@
             exit 1
           fi
 
+          # Bytecode costs +52 MiB and pays for it only while JSC accepts it:
+          # `--version` on 18.2.2 takes 67 ms on a hit and 499 ms on a miss, and
+          # a miss still starts. JSC reports the verdict on stderr.
+          if ! BUN_JSC_verboseDiskCache=1 "$out/bin/omp" --version 2>&1 >/dev/null |
+            grep -q 'Cache hit for sourceCode'; then
+            echo "startup rejected the embedded JSC bytecode"
+            exit 1
+          fi
+
           ${installCheckCompletions}
 
           ${checkNativeAddons}
@@ -450,11 +417,7 @@
         '';
 
         passthru = {
-          inherit
-            bunDeps
-            bunRuntimeTemplate
-            toolchainWithTarget
-            ;
+          inherit bunDeps toolchainWithTarget;
           bun = pkgs.bun;
         };
 

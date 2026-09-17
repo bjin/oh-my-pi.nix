@@ -2,7 +2,7 @@
   "version": "18.2.2",
   "rev": "60c9a115b2e8decc0f75825459362d14188a8bc0",
   "hash": "sha256-ZE2cMT0TilNQOD0ap22pLk+0MtW6e9kGPUH11oWjJxw=",
-  "bunVersion": "1.3.14",
+  "bunVersion": "1.4.2",
   "rustToolchainChannel": "nightly-2026-08-12",
   "patchedDependencies": {
     "@ark/schema@0.56.2": "@ark%2Fschema@0.56.2.patch",
