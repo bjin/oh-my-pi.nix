@@ -172,6 +172,12 @@
       # the build stays Bazel-free. The napi CLI is not needed either:
       # `packages/natives/native/index.{js,d.ts}` are committed and regenerated
       # only when the Rust API changes.
+      #
+      # Since 18.3.3 the crate links a blank `PI_NATIVES_VERSION_STAMP:` slot
+      # that upstream's install step (`scripts/bazel-natives.ts`) fills with
+      # `packages/natives/package.json#version` after linking. The loader
+      # rejects an addon whose `__piNativesBuildVersion()` does not report that
+      # version, so every addon cargo builds has to be stamped the same way.
       nativeAddonVariants = {
         baseline = "x86-64-v2";
         modern = "x86-64-v3";
@@ -192,6 +198,7 @@
               --target ${rustTarget}
           install -Dm755 "$CARGO_TARGET_DIR/${rustTarget}/ci/libpi_natives.so" \
             "packages/natives/native/${nativeAddonFile variant}"
+          bun scripts/stamp-native-version.ts "packages/natives/native/${nativeAddonFile variant}"
         '') nativeAddonVariants
       );
       installNativeAddons = lib.concatStrings (
