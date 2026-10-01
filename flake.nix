@@ -183,6 +183,25 @@
         modern = "x86-64-v3";
       };
       nativeAddonFile = variant: "pi_natives.linux-x64-${variant}.node";
+      # tree-sitter's vendored `array.h` type-puns every `Array(T)*` through a
+      # generic `Array*` whose `contents` member is `void*`. `_array__grow` may
+      # realloc and store the new contents through the punned type, so under
+      # `-fstrict-aliasing` (implied by -O2) GCC keeps the pre-realloc pointer
+      # in a register and the tree-sitter-haskell scanner writes into the freed
+      # block; glibc aborts with "corrupted size vs. prev_size" on the next
+      # allocation. GCC 15 builds got away with it; since nixpkgs moved
+      # `default-gcc-version` to 16, `omp read Crash.hs` aborts. Fixed upstream
+      # in tree-sitter 0.26.4 (tree-sitter/tree-sitter@ed6e42c), but the
+      # grammar crates vendor their own pre-fix copy of the header.
+      #
+      # cc-rs spawns the compiler from each crate's build script, so
+      # `CARGO_PKG_NAME` selects which crates get the flag.
+      treeSitterCc = pkgs.writeShellScript "cc-tree-sitter" ''
+        case ''${CARGO_PKG_NAME-} in
+        *tree-sitter*) set -- "$@" -fno-strict-aliasing ;;
+        esac
+        exec ${pkgs.stdenv.cc}/bin/cc "$@"
+      '';
       buildNativeAddons = ''
         # pcre2-sys links a pkg-config libpcre2 when it finds one; upstream
         # release builds force the vendored static build instead.
@@ -192,7 +211,7 @@
         lib.mapAttrsToList (variant: targetCpu: ''
 
           echo "Building pi_natives addon: ${variant} (-Ctarget-cpu=${targetCpu})"
-          RUSTFLAGS="-C target-cpu=${targetCpu}" \
+          CC=${treeSitterCc} RUSTFLAGS="-C target-cpu=${targetCpu}" \
             cargo build --offline --profile ci --package pi-natives \
               ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--features wayland-pipewire"} \
               --target ${rustTarget}
