@@ -3,7 +3,6 @@
   "rev": "717f97f4d22b3d65c4a4eef6a744255d46f4d1a6",
   "hash": "sha256-AMWaw6lbNV4+yncRnWtU3ifaKTk2d+dlyGmE+KySjdQ=",
   "bunVersion": "1.4.2",
-  "rustToolchainChannel": "nightly-2026-08-12",
   "patchedDependencies": {
     "@ark/schema@0.56.2": "@ark%2Fschema@0.56.2.patch",
     "puppeteer-core@25.3.0": "puppeteer-core@25.3.0.patch"

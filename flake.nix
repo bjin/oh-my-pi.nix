@@ -202,24 +202,6 @@
         esac
         exec ${pkgs.stdenv.cc}/bin/cc "$@"
       '';
-      buildNativeAddons = ''
-        # pcre2-sys links a pkg-config libpcre2 when it finds one; upstream
-        # release builds force the vendored static build instead.
-        export PCRE2_SYS_STATIC=1
-      ''
-      + lib.concatStrings (
-        lib.mapAttrsToList (variant: targetCpu: ''
-
-          echo "Building pi_natives addon: ${variant} (-Ctarget-cpu=${targetCpu})"
-          CC=${treeSitterCc} RUSTFLAGS="-C target-cpu=${targetCpu}" \
-            cargo build --offline --profile ci --package pi-natives \
-              ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--features wayland-pipewire"} \
-              --target ${rustTarget}
-          install -Dm755 "$CARGO_TARGET_DIR/${rustTarget}/ci/libpi_natives.so" \
-            "packages/natives/native/${nativeAddonFile variant}"
-          bun scripts/stamp-native-version.ts "packages/natives/native/${nativeAddonFile variant}"
-        '') nativeAddonVariants
-      );
       installNativeAddons = lib.concatStrings (
         lib.mapAttrsToList (variant: _: ''
           install -Dm755 "packages/natives/native/${nativeAddonFile variant}" \
@@ -238,33 +220,103 @@
         '') nativeAddonVariants
       );
 
-      rustToolchainChannel = srcData.rustToolchainChannel;
-      toolchainWithTarget =
-        let
-          nightlyDateMatch = builtins.match "nightly-(.+)" rustToolchainChannel;
-          stableVersionMatch = builtins.match "[0-9]+\\.[0-9]+\\.[0-9]+" rustToolchainChannel;
-          baseToolchain =
-            if nightlyDateMatch != null then
-              pkgs.rust-bin.nightly."${builtins.head nightlyDateMatch}".minimal
-            else if rustToolchainChannel == "nightly" then
-              pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.minimal)
-            else if rustToolchainChannel == "stable" then
-              pkgs.rust-bin.stable.latest.minimal
-            else if rustToolchainChannel == "beta" then
-              pkgs.rust-bin.beta.latest.minimal
-            else if stableVersionMatch != null then
-              pkgs.rust-bin.stable."${rustToolchainChannel}".minimal
-            else
-              throw "Unsupported rustToolchainChannel: ${rustToolchainChannel}";
-        in
-        baseToolchain.override {
-          targets = [ rustTarget ];
-        };
-
+      # Upstream pins a nightly in `rust-toolchain.toml` for pi-natives'
+      # `#![feature(alloc_error_hook)]` and for cargo's `[unstable]
+      # embed-metadata` in `.cargo/config.toml`. Build with the newest stable
+      # release instead, so the toolchain only moves with this flake's
+      # rust-overlay input rather than with every pin bump upstream, and let
+      # RUSTC_BOOTSTRAP unlock the rustc feature. `embed-metadata` only trims
+      # `target/`; a cargo that predates the key warns about it and carries on.
+      rustToolchain = pkgs.rust-bin.stable.latest.minimal;
       rustPlatform = pkgs.makeRustPlatform {
-        cargo = toolchainWithTarget;
-        rustc = toolchainWithTarget;
+        cargo = rustToolchain;
+        rustc = rustToolchain;
       };
+
+      # One derivation per variant: `-Ctarget-cpu` reaches every crate, so the
+      # variants have no artifacts to share, and kept apart they build in
+      # parallel, never touch each other's target directory, and survive
+      # changes to the JS build untouched.
+      nativeAddons = lib.mapAttrs (
+        variant: targetCpu:
+        pkgs.stdenv.mkDerivation {
+          pname = "${pname}-natives-${variant}";
+          version = sourceVersion;
+          src = sourceSrc;
+
+          cargoDeps = rustPlatform.importCargoLock {
+            lockFile = ./upstream/Cargo.lock;
+          };
+
+          nativeBuildInputs = [
+            # `opusic-sys` — the `-sys` layer under the `opus` crate — has no
+            # system-libopus path: its default `bundled` feature always compiles
+            # and statically links the libopus it vendors, with CMake.
+            pkgs.cmake
+            # Upstream's `.cargo/config.toml` pins `CMAKE_GENERATOR=Ninja` for the
+            # whole workspace, so every cmake-rs build script configures with `-G
+            # Ninja` and dies unless that generator's build program is on PATH.
+            pkgs.ninja
+            pkgs.pkg-config
+            pkgs.removeReferencesTo
+            pkgs.writableTmpDirAsHomeHook
+            rustToolchain
+            rustPlatform.cargoSetupHook
+            # `pipewire-sys` and `libspa-sys` generate bindings with libclang; this
+            # hook also provides their Nix libc include flags.
+            rustPlatform.bindgenHook
+          ];
+          # `pi-natives`' `wayland-pipewire` feature links system libpipewire
+          # through pkg-config.
+          buildInputs = [ pkgs.pipewire ];
+          strictDeps = true;
+          dontConfigure = true;
+          # CMake belongs to `opusic-sys`, not this derivation's source root.
+          dontUseCmakeConfigure = true;
+          # The `ci` profile strips symbols already.
+          dontStrip = true;
+
+          env = {
+            RUSTC_BOOTSTRAP = "1";
+            # pcre2-sys links a pkg-config libpcre2 when it finds one; upstream
+            # release builds force the vendored static build instead.
+            PCRE2_SYS_STATIC = "1";
+          };
+
+          buildPhase = ''
+            runHook preBuild
+
+            CC=${treeSitterCc} RUSTFLAGS="-C target-cpu=${targetCpu}" \
+              cargo build --offline --profile ci --package pi-natives \
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--features wayland-pipewire"} \
+                --target ${rustTarget}
+
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+
+            install -Dm755 "target/${rustTarget}/ci/libpi_natives.so" \
+              "$out/lib/${nativeAddonFile variant}"
+            # The linker's RPATH names this output, and the fixup that shrinks
+            # it leaves the old string behind: the oh-my-pi build that copies
+            # the addon would otherwise keep this whole output alive.
+            remove-references-to -t "$out" "$out/lib/${nativeAddonFile variant}"
+
+            runHook postInstall
+          '';
+        }
+      ) nativeAddonVariants;
+      # The stamp script runs on Bun inside the JS workspace, so the addons are
+      # stamped where oh-my-pi stages them rather than by their own builds.
+      stageNativeAddons = lib.concatStrings (
+        lib.mapAttrsToList (variant: addon: ''
+          install -Dm755 "${addon}/lib/${nativeAddonFile variant}" \
+            "packages/natives/native/${nativeAddonFile variant}"
+          bun scripts/stamp-native-version.ts "packages/natives/native/${nativeAddonFile variant}"
+        '') nativeAddons
+      );
 
       # `fetchBunDeps` hands the file to `pkgs.callPackage`, whose autofill
       # supplies `copyPathToStore` — an eval-time `builtins.path`. Upstream
@@ -316,42 +368,21 @@
         version = sourceVersion;
         src = sourceSrc;
 
-        cargoDeps = rustPlatform.importCargoLock {
-          lockFile = ./upstream/Cargo.lock;
-        };
-
         nativeBuildInputs = [
           pkgs.autoPatchelfHook
           pkgs.bun
           pkgs.bun2nix.hook
-          # `opusic-sys` — the `-sys` layer under the `opus` crate — has no
-          # system-libopus path: its default `bundled` feature always compiles
-          # and statically links the libopus it vendors, with CMake.
-          pkgs.cmake
           pkgs.installShellFiles
-          # Upstream's `.cargo/config.toml` pins `CMAKE_GENERATOR=Ninja` for the
-          # whole workspace, so every cmake-rs build script configures with `-G
-          # Ninja` and dies unless that generator's build program is on PATH.
-          pkgs.ninja
-          pkgs.pkg-config
-          toolchainWithTarget
-          rustPlatform.cargoSetupHook
-          # `pipewire-sys` and `libspa-sys` generate bindings with libclang; this
-          # hook also provides their Nix libc include flags.
-          rustPlatform.bindgenHook
         ];
 
         buildInputs = [
           pkgs.stdenv.cc.cc.lib
           pkgs.zlib
-          # `pi-natives`' `wayland-pipewire` feature links system libpipewire
-          # through pkg-config.
+          # For autoPatchelfHook: the addons link libpipewire (`wayland-pipewire`).
           pkgs.pipewire
         ];
         strictDeps = true;
         dontConfigure = true;
-        # CMake belongs to `opusic-sys`, not this derivation's source root.
-        dontUseCmakeConfigure = true;
         dontStrip = true;
         # Nix builders cannot hardlink cache files into node_modules.
         bunInstallFlags = [
@@ -367,11 +398,10 @@
 
           export HOME="$TMPDIR/home"
           export XDG_CACHE_HOME="$TMPDIR/xdg-cache"
-          export CARGO_TARGET_DIR="$TMPDIR/cargo-target"
-          mkdir -p "$HOME" "$XDG_CACHE_HOME" "$CARGO_TARGET_DIR"
+          mkdir -p "$HOME" "$XDG_CACHE_HOME"
           export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]}"
 
-          ${buildNativeAddons}
+          ${stageNativeAddons}
 
           bun --cwd=packages/coding-agent run build
 
@@ -401,8 +431,9 @@
           postFixupHooks+=(ohMyPiPostFixup)
         '';
         # Without the entry shebang the payload holds no store path at all, so a
-        # reappearing Bun reference means the shebang came back.
-        disallowedReferences = [ pkgs.bun ];
+        # reappearing Bun reference means the shebang came back. The addons are
+        # copies, and a reference back to their builds would ship each twice.
+        disallowedReferences = [ pkgs.bun ] ++ lib.attrValues nativeAddons;
 
         doInstallCheck = true;
         installCheckPhase = ''
@@ -443,7 +474,7 @@
         '';
 
         passthru = {
-          inherit bunDeps toolchainWithTarget;
+          inherit bunDeps nativeAddons rustToolchain;
           bun = pkgs.bun;
         };
 

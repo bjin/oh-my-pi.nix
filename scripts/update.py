@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
-import tomllib
 import urllib.request
 from pathlib import Path, PurePosixPath
 
@@ -220,14 +219,6 @@ def check_bun_pin(pinned: str, floors: dict[str, tuple[int, ...]]) -> None:
         )
 
 
-def read_rust_toolchain_channel(tree: Path) -> str:
-    toolchain = tomllib.loads((tree / "rust-toolchain.toml").read_text())
-    channel = toolchain.get("toolchain", {}).get("channel")
-    if not isinstance(channel, str) or not channel:
-        raise SystemExit("upstream release does not declare a rust toolchain channel")
-    return channel
-
-
 def read_source_version(tree: Path) -> str:
     version = read_json(tree / "packages/coding-agent/package.json").get("version")
     if not isinstance(version, str) or not version:
@@ -273,7 +264,6 @@ def write_pin(
     rev: str,
     source_hash: str,
     bun_version: str,
-    rust_toolchain_channel: str,
     patched_dependencies: dict[str, str],
 ) -> None:
     HASHES_PATH.write_text(
@@ -283,7 +273,6 @@ def write_pin(
                 "rev": rev,
                 "hash": source_hash,
                 "bunVersion": bun_version,
-                "rustToolchainChannel": rust_toolchain_channel,
                 "patchedDependencies": patched_dependencies,
             },
             indent=2,
@@ -473,7 +462,6 @@ def main() -> int:
             rev,
             hash_source(tree),
             bun_version,
-            read_rust_toolchain_channel(tree),
             vendor_upstream_files(tree, read_patched_dependencies(tree)),
         )
         stage()

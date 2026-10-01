@@ -54,3 +54,5 @@ nix run github:bjin/oh-my-pi.nix#oh-my-pi -- --version
 nix build .
 ./result/bin/omp --version
 ```
+
+The native addons build with the latest stable Rust rather than the nightly upstream pins, with `RUSTC_BOOTSTRAP` unlocking the unstable features upstream relies on. Each `-Ctarget-cpu` variant is a derivation of its own (`.#oh-my-pi.nativeAddons.{baseline,modern}`), so changes to the JS build reuse both.
