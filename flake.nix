@@ -134,14 +134,13 @@
       ];
       useLooseNativeAddons = ''
         # Nix ships native addons as loose .node files next to the compiled
-        # executable. Reuse upstream's reset path so the standalone binary does
-        # not embed a compressed native archive that every new version would
-        # unpack into ~/.omp/natives (138 MiB per release) on first start; the
-        # loader then falls back to those loose files from process.execPath's
-        # directory.
-        substituteInPlace packages/natives/scripts/embed-native.ts \
-          --replace-fail 'process.argv.includes("--reset")' \
-            'true'
+        # executable. Disable embedding through the compiler's native option so
+        # the binary does not carry a compressed native archive that every new
+        # version would unpack into ~/.omp/natives on first start; the loader
+        # falls back to loose files from process.execPath's directory.
+        substituteInPlace packages/coding-agent/scripts/build-binary.ts \
+          --replace-fail 'native: crossBuild ?? { platform: process.platform, arch: process.arch },' \
+            'native: null,'
       '';
       # `bun2nix`'s hook runs `patchShebangs .`, so `cli.ts` carries
       # `#!${pkgs.bun}/bin/bun` by the time Bun bundles it, and Bun copies the
