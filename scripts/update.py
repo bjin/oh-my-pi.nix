@@ -381,12 +381,6 @@ def run_omp_isolated(*args: str, extra_env: dict[str, str] | None = None) -> str
         )
 
 
-def verify_haskell_crash_regression() -> None:
-    output = run_omp_isolated("read", str(ROOT / "Crash.hs"))
-    if not output:
-        raise SystemExit("Haskell crash regression produced no output")
-
-
 def verify_embedded_bun_runtime() -> None:
     # The binary embeds the Bun that built it. A wrong one still starts the CLI,
     # but every `Bun.Image` caller (resize, PNG, kitty rendering) degrades.
@@ -404,7 +398,6 @@ def verify_smoke_test() -> None:
     output = run_omp_isolated("--smoke-test")
     if output != "smoke-test: ok":
         raise SystemExit(f"unexpected smoke test output: {output!r}")
-    verify_haskell_crash_regression()
     verify_embedded_bun_runtime()
 
 

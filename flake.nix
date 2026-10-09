@@ -215,16 +215,13 @@
         modern = "x86-64-v3";
       };
       nativeAddonFile = variant: "pi_natives.linux-x64-${variant}.node";
-      # tree-sitter's vendored `array.h` type-puns every `Array(T)*` through a
-      # generic `Array*` whose `contents` member is `void*`. `_array__grow` may
-      # realloc and store the new contents through the punned type, so under
-      # `-fstrict-aliasing` (implied by -O2) GCC keeps the pre-realloc pointer
-      # in a register and the tree-sitter-haskell scanner writes into the freed
-      # block; glibc aborts with "corrupted size vs. prev_size" on the next
-      # allocation. GCC 15 builds got away with it; since nixpkgs moved
-      # `default-gcc-version` to 16, `omp read Crash.hs` aborts. Fixed upstream
-      # in tree-sitter 0.26.4 (tree-sitter/tree-sitter@ed6e42c), but the
-      # grammar crates vendor their own pre-fix copy of the header.
+      # Keep strict aliasing disabled for locally compiled tree-sitter grammars:
+      # vendored `array.h` headers type-pun `Array(T)*` through a generic `Array*`,
+      # so GCC may retain a stale pointer across `_array__grow`'s realloc.
+      # Fixed in tree-sitter 0.26.4 (tree-sitter/tree-sitter@ed6e42c), but grammar
+      # crates vendor their headers independently of the runtime.
+      # Haskell, which exposed this with GCC 16, now ships as prebuilt WASM and
+      # is no longer compiled by this wrapper.
       #
       # cc-rs spawns the compiler from each crate's build script, so
       # `CARGO_PKG_NAME` selects which crates get the flag.

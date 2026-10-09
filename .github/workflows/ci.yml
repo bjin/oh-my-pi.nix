@@ -50,13 +50,6 @@ jobs:
             echo "Unexpected smoke test output: $output" >&2
             exit 1
           fi
-          crash_output=$(mktemp)
-          trap 'rm -f "$crash_output"' EXIT
-          "./${{ matrix.package.out_link }}/bin/omp" read Crash.hs > "$crash_output"
-          if [ ! -s "$crash_output" ]; then
-            echo "Haskell crash regression produced no output" >&2
-            exit 1
-          fi
           bun_runtime=$(BUN_BE_BUN=1 "./${{ matrix.package.out_link }}/bin/omp" \
             -e 'console.log(`${Bun.version} ${typeof Bun.Image}`)')
           if [ "${bun_runtime##* }" != 'function' ]; then
