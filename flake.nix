@@ -85,6 +85,39 @@
         hash = srcData.hash;
       };
 
+      # The updater vendors the complete manifest for the release named in the
+      # registry header, not its individual declarations. Evaluation stays offline.
+      # https://github.com/stencil-hq/wasm-grammars/releases/tag/v1
+      # https://github.com/stencil-hq/wasm-grammars/releases/download/v1/manifest.json
+      grammarManifest = builtins.fromJSON (builtins.readFile ./grammars.json);
+      grammarFiles = map (
+        grammar:
+        pkgs.fetchurl {
+          name = grammar.file;
+          url = "https://github.com/stencil-hq/wasm-grammars/releases/download/${grammarManifest.release}/${grammar.file}.zst";
+          sha256 = grammar.sha256;
+          downloadToTemp = true;
+          postFetch = ''
+            ${pkgs.zstd}/bin/zstd --decompress --stdout "$downloadedFile" > "$out"
+          '';
+        }
+      ) grammarManifest.grammars;
+      grammars = pkgs.stdenvNoCC.mkDerivation {
+        pname = "${pname}-grammars";
+        version = grammarManifest.release;
+        dontUnpack = true;
+        dontConfigure = true;
+        dontBuild = true;
+        installPhase = ''
+          runHook preInstall
+          mkdir -p "$out"
+          ${lib.concatMapStringsSep "\n" (file: ''
+            install -m644 ${file} "$out/${file.name}"
+          '') grammarFiles}
+          runHook postInstall
+        '';
+      };
+
       # `--smoke-test` starts a daemon broker whose runtime directory is a
       # `mkdtemp` straight under `os.tmpdir()` (upstream
       # `launch/client.ts:smokeTestDaemonBroker`), and every broker sweeps that
@@ -242,6 +275,12 @@
           pname = "${pname}-natives-${variant}";
           version = sourceVersion;
           src = sourceSrc;
+
+          patches = [
+            (pkgs.replaceVars ./system-grammars.patch {
+              inherit grammars;
+            })
+          ];
 
           cargoDeps = rustPlatform.importCargoLock {
             lockFile = ./upstream/Cargo.lock;
@@ -559,6 +598,7 @@
         default = ohMyPi;
         "oh-my-pi" = ohMyPi;
         "oh-my-pi-bin" = ohMyPiBin;
+        "oh-my-pi-grammars" = grammars;
       };
 
       apps.${system} = {

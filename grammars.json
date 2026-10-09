@@ -1,0 +1,357 @@
+{
+  "release": "v1",
+  "tree_sitter": "0.25.10",
+  "grammars": [
+    {
+      "language": "astro",
+      "crate": "tree-sitter-astro-next",
+      "version": "0.1.1",
+      "symbol": "astro",
+      "file": "astro-612c83b88b97ba7c.wasm",
+      "sha256": "612c83b88b97ba7cc53a4808aebf71196442d2aea70955333b114212b771a4d7",
+      "size": 24622
+    },
+    {
+      "language": "clojure",
+      "crate": "tree-sitter-clojure",
+      "version": "0.1.0",
+      "symbol": "clojure",
+      "file": "clojure-f63ecd31939b06c3.wasm",
+      "sha256": "f63ecd31939b06c315c49794a628059b6f16de191a17b148a290e5f8faffbc0a",
+      "size": 97934
+    },
+    {
+      "language": "cmake",
+      "crate": "tree-sitter-cmake",
+      "version": "0.7.5",
+      "symbol": "cmake",
+      "file": "cmake-38a05d65733bf24f.wasm",
+      "sha256": "38a05d65733bf24f4469b01d644d6b8e26e779fcc40ae562037dd699aee6e103",
+      "size": 75504
+    },
+    {
+      "language": "csharp",
+      "crate": "tree-sitter-c-sharp",
+      "version": "0.23.5",
+      "symbol": "c_sharp",
+      "file": "csharp-f265130d20fe62d3.wasm",
+      "sha256": "f265130d20fe62d3dc0cec756ee5a4159bd9825894a48fc0f7e72c8bd30ef099",
+      "size": 5328197
+    },
+    {
+      "language": "dart",
+      "crate": "tree-sitter-dart",
+      "version": "0.2.0",
+      "symbol": "dart",
+      "file": "dart-52bdbf469a2343a5.wasm",
+      "sha256": "52bdbf469a2343a52385f75dab61097fe9c157e747ddfcc52200c153c4259d4b",
+      "size": 1269300
+    },
+    {
+      "language": "dockerfile",
+      "crate": "tree-sitter-dockerfile-updated",
+      "version": "0.2.0",
+      "symbol": "dockerfile",
+      "file": "dockerfile-6d95cfe08d32ad32.wasm",
+      "sha256": "6d95cfe08d32ad32cd4e3e13e209f03ae59fbd495ad61014e1873fbbbb6c5078",
+      "size": 48699
+    },
+    {
+      "language": "elixir",
+      "crate": "tree-sitter-elixir",
+      "version": "0.3.5",
+      "symbol": "elixir",
+      "file": "elixir-1160c3b90a7c1eb7.wasm",
+      "sha256": "1160c3b90a7c1eb7cb8f8e5c3a1960db3219c97c10fa21b1421b79142cc2e556",
+      "size": 1412268
+    },
+    {
+      "language": "emacs-lisp",
+      "crate": "tree-sitter-elisp",
+      "version": "1.7.2",
+      "symbol": "elisp",
+      "file": "emacs-lisp-d4fee941a25f6464.wasm",
+      "sha256": "d4fee941a25f646467cebe60317f46eb0f47b617c76fb9a1a60e7e7982b43415",
+      "size": 52513
+    },
+    {
+      "language": "erlang",
+      "crate": "tree-sitter-erlang",
+      "version": "0.16.0",
+      "symbol": "erlang",
+      "file": "erlang-bb8809212393e686.wasm",
+      "sha256": "bb8809212393e68687d0f2bc1309c4ca7601fa704a8a96edaffaa34585f1b1b7",
+      "size": 418478
+    },
+    {
+      "language": "fortran",
+      "crate": "tree-sitter-fortran",
+      "version": "0.6.0",
+      "symbol": "fortran",
+      "file": "fortran-f72872963184cdb4.wasm",
+      "sha256": "f72872963184cdb4ccb623be3e4e40606066a317be6d5d61cdc929b51bba6d22",
+      "size": 6591350
+    },
+    {
+      "language": "graphql",
+      "crate": "tree-sitter-graphql",
+      "version": "0.1.0",
+      "symbol": "graphql",
+      "file": "graphql-fd4081c84308f5db.wasm",
+      "sha256": "fd4081c84308f5db14a4a6e1bea91c08f9c38e5ab47e5a0730c4a39448844d00",
+      "size": 57563
+    },
+    {
+      "language": "haskell",
+      "crate": "tree-sitter-haskell",
+      "version": "0.23.1",
+      "symbol": "haskell",
+      "file": "haskell-ddc4978970326bc4.wasm",
+      "sha256": "ddc4978970326bc46369f3dff15027c54dac79adb7aca9ba7b6d3a20ebb1b3e0",
+      "size": 3805634
+    },
+    {
+      "language": "hcl",
+      "crate": "tree-sitter-hcl",
+      "version": "1.1.0",
+      "symbol": "hcl",
+      "file": "hcl-1b4b186da007c489.wasm",
+      "sha256": "1b4b186da007c48980f7ec7259b15edb2ea6cb1b8cf7ad01d5c9c39456aa52fb",
+      "size": 93351
+    },
+    {
+      "language": "ini",
+      "crate": "tree-sitter-ini",
+      "version": "1.4.0",
+      "symbol": "ini",
+      "file": "ini-4884a74e0e60d02f.wasm",
+      "sha256": "4884a74e0e60d02fc897b1f780c044e578ff839c9eeb6f4742d2feaef9839ece",
+      "size": 4710
+    },
+    {
+      "language": "julia",
+      "crate": "tree-sitter-julia",
+      "version": "0.23.1",
+      "symbol": "julia",
+      "file": "julia-78d8e1aa3b207c29.wasm",
+      "sha256": "78d8e1aa3b207c290631bbb071ebbe20f91d631e91dd2d78a71358472660978a",
+      "size": 6223351
+    },
+    {
+      "language": "just",
+      "crate": "tree-sitter-just",
+      "version": "0.2.0",
+      "symbol": "just",
+      "file": "just-989d19dab6b34933.wasm",
+      "sha256": "989d19dab6b349337e0335e8f8bfe39de40f27639dc34c23a0d8c63678a69e68",
+      "size": 44632
+    },
+    {
+      "language": "kotlin",
+      "crate": "tree-sitter-kotlin-sg",
+      "version": "0.4.1",
+      "symbol": "kotlin",
+      "file": "kotlin-83d1aa9580f91a32.wasm",
+      "sha256": "83d1aa9580f91a32b51a057ad4216166c29e488bf750aa891ae528f7a04dd4bf",
+      "size": 5772696
+    },
+    {
+      "language": "lua",
+      "crate": "tree-sitter-lua",
+      "version": "0.5.0",
+      "symbol": "lua",
+      "file": "lua-83446c583739247d.wasm",
+      "sha256": "83446c583739247d74ae0953a1844b642fc126a5e773b797ecd0f7b5af686c84",
+      "size": 53205
+    },
+    {
+      "language": "make",
+      "crate": "tree-sitter-make",
+      "version": "1.1.1",
+      "symbol": "make",
+      "file": "make-c2a057ef58739b2f.wasm",
+      "sha256": "c2a057ef58739b2f8025bc3f7d04a62ae3daad8aeb7979b2db6097800950cded",
+      "size": 147044
+    },
+    {
+      "language": "nix",
+      "crate": "tree-sitter-nix",
+      "version": "0.3.0",
+      "symbol": "nix",
+      "file": "nix-10a66e15b62be1a5.wasm",
+      "sha256": "10a66e15b62be1a59cd256abf4b48fdeac07e50c0a8e50ceb64296fcec019930",
+      "size": 79503
+    },
+    {
+      "language": "objc",
+      "crate": "tree-sitter-objc",
+      "version": "3.0.2",
+      "symbol": "objc",
+      "file": "objc-ede2d58688f085d4.wasm",
+      "sha256": "ede2d58688f085d4d36ccdf7f2b50aa61f70ea4f134dd3741c23ad857473a148",
+      "size": 5317156
+    },
+    {
+      "language": "ocaml",
+      "crate": "tree-sitter-ocaml",
+      "version": "0.24.2",
+      "symbol": "ocaml",
+      "file": "ocaml-c60bd9980a698106.wasm",
+      "sha256": "c60bd9980a698106c09dccf5a089841e7d285721ad8ce9e4fd5a326bf3316d0f",
+      "size": 5553927
+    },
+    {
+      "language": "odin",
+      "crate": "tree-sitter-odin",
+      "version": "1.3.0",
+      "symbol": "odin",
+      "file": "odin-0fa018a7182e62a6.wasm",
+      "sha256": "0fa018a7182e62a6414379018fb1bbe2e46ca39f6f1cd6584a4609481c1f303e",
+      "size": 2215304
+    },
+    {
+      "language": "php",
+      "crate": "tree-sitter-php",
+      "version": "0.24.2",
+      "symbol": "php_only",
+      "file": "php-cb7397cba44a21ce.wasm",
+      "sha256": "cb7397cba44a21ce6882d8173c597d66e32a257cb1f628ba45cdf23f9d8d7c6a",
+      "size": 1002409
+    },
+    {
+      "language": "powershell",
+      "crate": "tree-sitter-powershell",
+      "version": "0.26.4",
+      "symbol": "powershell",
+      "file": "powershell-2a24f946f96e67ac.wasm",
+      "sha256": "2a24f946f96e67ac812fb6c7d647576a033febc0c48f4c91a340b549e7eac73d",
+      "size": 990743
+    },
+    {
+      "language": "protobuf",
+      "crate": "tree-sitter-proto",
+      "version": "0.4.0",
+      "symbol": "proto",
+      "file": "protobuf-0b226f4132ac4493.wasm",
+      "sha256": "0b226f4132ac4493642b8df1fbeb7541c92e36e3fb152064ef662d072135b795",
+      "size": 73836
+    },
+    {
+      "language": "r",
+      "crate": "tree-sitter-r",
+      "version": "1.3.0",
+      "symbol": "r",
+      "file": "r-908227b85fae8f37.wasm",
+      "sha256": "908227b85fae8f37660f9991110349a2ce6ecde650549c8a72cda800caa5e948",
+      "size": 484429
+    },
+    {
+      "language": "ruby",
+      "crate": "tree-sitter-ruby",
+      "version": "0.23.1",
+      "symbol": "ruby",
+      "file": "ruby-e77f88559b47c0fe.wasm",
+      "sha256": "e77f88559b47c0fe2771821c6c160cdf6bbfe17afcd642ab3fdda9aebb70b2f3",
+      "size": 2106322
+    },
+    {
+      "language": "scala",
+      "crate": "tree-sitter-scala",
+      "version": "0.26.2",
+      "symbol": "scala",
+      "file": "scala-f1699072abf3668a.wasm",
+      "sha256": "f1699072abf3668a995ece3950a52c00f9da168a58684fe104e98214b0a74903",
+      "size": 3922744
+    },
+    {
+      "language": "solidity",
+      "crate": "tree-sitter-solidity",
+      "version": "1.2.13",
+      "symbol": "solidity",
+      "file": "solidity-ac4d44dc54b7a475.wasm",
+      "sha256": "ac4d44dc54b7a475c2284ae27ab0af932043e2cfd4e200a416b2ac5d40f433d7",
+      "size": 508585
+    },
+    {
+      "language": "sql",
+      "crate": "tree-sitter-sequel",
+      "version": "0.3.11",
+      "symbol": "sql",
+      "file": "sql-f9d5638965f6f7ec.wasm",
+      "sha256": "f9d5638965f6f7ecc6b6979b8717f44e756687a1cbe4fef411b84506bdb81451",
+      "size": 2433442
+    },
+    {
+      "language": "starlark",
+      "crate": "tree-sitter-starlark",
+      "version": "1.3.0",
+      "symbol": "starlark",
+      "file": "starlark-1f892a95b3d42e69.wasm",
+      "sha256": "1f892a95b3d42e69e71eeb3efdba3cc605a5c8b221b554e250f5418c64c682a6",
+      "size": 329944
+    },
+    {
+      "language": "svelte",
+      "crate": "tree-sitter-svelte-next",
+      "version": "0.1.1",
+      "symbol": "svelte",
+      "file": "svelte-03ab329192177443.wasm",
+      "sha256": "03ab329192177443c91eaf0904b011089cc6b779df1792468afd379c0a6a2512",
+      "size": 44859
+    },
+    {
+      "language": "swift",
+      "crate": "tree-sitter-swift",
+      "version": "0.7.3",
+      "symbol": "swift",
+      "file": "swift-92a6aa39712255e7.wasm",
+      "sha256": "92a6aa39712255e7332d1b06db52bc6d49e9f563215846978c0ca63b6cc38359",
+      "size": 3726992
+    },
+    {
+      "language": "tlaplus",
+      "crate": "tree-sitter-tlaplus",
+      "version": "1.5.0",
+      "symbol": "tlaplus",
+      "file": "tlaplus-2bb6711906017f86.wasm",
+      "sha256": "2bb6711906017f861d3c143553c5077fc167f29d023a606a5dcfc159efb9e5bc",
+      "size": 4878580
+    },
+    {
+      "language": "verilog",
+      "crate": "tree-sitter-verilog",
+      "version": "1.0.3",
+      "symbol": "verilog",
+      "file": "verilog-46f723039630ef85.wasm",
+      "sha256": "46f723039630ef85b8a2dd324cba2673207163f760eb435c800bc0f56d78bb0e",
+      "size": 18135336
+    },
+    {
+      "language": "vue",
+      "crate": "tree-sitter-vue-next",
+      "version": "0.1.0",
+      "symbol": "vue",
+      "file": "vue-a9b2b4573afa0f31.wasm",
+      "sha256": "a9b2b4573afa0f31a878753a30e2cda2030baa26544159448da6ba8c69bfa76d",
+      "size": 28095
+    },
+    {
+      "language": "xml",
+      "crate": "tree-sitter-xml",
+      "version": "0.7.0",
+      "symbol": "xml",
+      "file": "xml-fafa7327c7a09ba7.wasm",
+      "sha256": "fafa7327c7a09ba74612e23543ff4e93ee08b785f0a8c2f8292c03f0b65c4917",
+      "size": 46968
+    },
+    {
+      "language": "zig",
+      "crate": "tree-sitter-zig",
+      "version": "1.1.2",
+      "symbol": "zig",
+      "file": "zig-4dd568b541381b9d.wasm",
+      "sha256": "4dd568b541381b9ddcd0b53eda9956d26fea148b26f0af2ec52b1e8b4de3ed2e",
+      "size": 691729
+    }
+  ]
+}
