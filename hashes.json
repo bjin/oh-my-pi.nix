@@ -1,7 +1,7 @@
 {
-  "version": "18.9.2",
-  "rev": "bd4dffd5e617ce732f8a14249b0be1e6c7621886",
-  "hash": "sha256-thp9cUYJJqbwLlYBBuGkbmQLG0nKlOxCKoZBQHIDJ+w=",
+  "version": "18.10.1",
+  "rev": "5d0aaffaf1f987503ce129a642fb6e30339615af",
+  "hash": "sha256-vDwNfv4sE6bwOmGoP51vLR3mrAo5XFwz5jpV+O8l9AM=",
   "bunVersion": "1.4.2",
   "patchedDependencies": {
     "@ark/schema@0.56.2": "@ark%2Fschema@0.56.2.patch",
