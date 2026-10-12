@@ -175,18 +175,6 @@
           --replace-fail 'native: crossBuild ?? { platform: process.platform, arch: process.arch },' \
             'native: null,'
       '';
-      # `bun2nix`'s hook runs `patchShebangs .`, so `cli.ts` carries
-      # `#!${pkgs.bun}/bin/bun` by the time Bun bundles it, and Bun copies the
-      # entry shebang verbatim into the payload — a store reference in a binary
-      # that never execs it. Drop the line instead of rewriting the finished
-      # payload: `remove-references-to` edits the embedded source JSC keys its
-      # bytecode cache on (the 1.4 CommonJS payload survives it, the ESM one
-      # does not), and a rejected cache still starts, just 7x slower. `//` keeps
-      # the line numbering stack traces report.
-      stripEntrypointShebang = ''
-        substituteInPlace packages/coding-agent/src/cli.ts \
-          --replace-fail '#!/usr/bin/env bun' '//'
-      '';
       commonMeta = {
         description = "AI coding agent for the terminal";
         homepage = "https://github.com/can1357/oh-my-pi";
@@ -408,6 +396,7 @@
           pkgs.bun
           pkgs.bun2nix.hook
           pkgs.installShellFiles
+          pkgs.writableTmpDirAsHomeHook
         ];
 
         buildInputs = [
@@ -425,8 +414,14 @@
           "--backend=copyfile"
         ];
         dontRunLifecycleScripts = true;
+        # Bun preserves shebangs in the compiled entrypoint and, with splitting,
+        # lazy chunks such as omp-stats. bun2nix's patchShebangs would inject a
+        # build-time Bun store reference into each. Build scripts run through
+        # `bun` explicitly, so leave source shebangs untouched. Do not scrub the
+        # finished payload: changing embedded source invalidates JSC bytecode.
+        dontUseBunPatch = true;
 
-        postPatch = useLooseNativeAddons + stripEntrypointShebang;
+        postPatch = useLooseNativeAddons;
 
         buildPhase = ''
           runHook preBuild
@@ -465,9 +460,8 @@
           }
           postFixupHooks+=(ohMyPiPostFixup)
         '';
-        # Without the entry shebang the payload holds no store path at all, so a
-        # reappearing Bun reference means the shebang came back. The addons are
-        # copies, and a reference back to their builds would ship each twice.
+        # The standalone executable must not retain the build-time Bun. The
+        # addons are copies; references to their builds would ship each twice.
         disallowedReferences = [ pkgs.bun ] ++ lib.attrValues nativeAddons;
 
         doInstallCheck = true;

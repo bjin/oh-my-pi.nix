@@ -59,6 +59,13 @@ The native addons build with the latest stable Rust rather than the nightly upst
 
 The source build ships native addons beside the executable rather than extracting an embedded archive into `~/.omp/natives`. Since 18.7.0, the flake disables embedding with `native: null` in upstream's `build-binary.ts`; the previous `embed-native.ts --reset` path no longer exists.
 
+The source build leaves upstream shebangs unchanged by disabling bun2nix's
+source shebang patching. Bun preserves those lines in the compiled entrypoint
+and the lazy chunks used since 18.9.2; patching them would retain the build-time
+Bun package in the runtime closure. The build rejects that reference and checks
+that the embedded JSC bytecode still hits its cache, rather than scrubbing the
+compiled binary afterward.
+
 The source build also ships all 39 WebAssembly grammars from the
 [wasm-grammars v1 release](https://github.com/stencil-hq/wasm-grammars/releases/tag/v1).
 `grammars.json` is a verbatim snapshot of that release's
