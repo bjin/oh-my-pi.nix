@@ -51,12 +51,17 @@
       # One Bun release runs the build and is embedded in the binary, so the pin
       # must clear both floors upstream declares: `engines.bun` (>=1.3.14), which
       # `cli.ts` enforces at startup for its unguarded `Bun.Image` calls, and the
-      # root `packageManager` (bun@>=1.4). The latter is load bearing —
-      # `bytecode: true` in `compile-binary.ts` switches Bun's output format to
-      # CommonJS, and only 1.4 lowers this graph's `import.meta.resolve` out of
-      # that program wrapper; 1.3.x emits no bytecode and dies before `main`
-      # with `TypeError: Expected CommonJS module to have a function wrapper`.
-      # nixpkgs' bun (1.3.13) clears neither floor, hence nix-bun;
+      # root `packageManager` (bun@1.4.4). Both halves of the latter are load
+      # bearing. The minor: `bytecode: true` in `compile-binary.ts` switches
+      # Bun's output format to CommonJS, and only 1.4 lowers this graph's
+      # `import.meta.resolve` out of that program wrapper; 1.3.x emits no
+      # bytecode and dies before `main` with `TypeError: Expected CommonJS
+      # module to have a function wrapper`. The patch: 18.13.0 raised the pin
+      # from `bun@>=1.4` because 1.4.3 and older still trust the compromised
+      # eMudhra CAs (CVE-2026-91403) and carry a Brotli decoder out-of-bounds
+      # write (CVE-2026-111497); upstream pins it exactly only to keep its own
+      # CI on one Bun (can1357/oh-my-pi#16865), so a newer Bun clears it too.
+      # nixpkgs' bun (1.4.2) predates both fixes, hence nix-bun;
       # `scripts/update.py` rechecks the pin on every update.
       requiredBunVersion = srcData.bunVersion;
       bunSourcesFile = nix-bun + "/versions/${requiredBunVersion}.json";

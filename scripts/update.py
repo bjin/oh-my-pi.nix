@@ -179,10 +179,13 @@ def read_json(path: Path) -> dict:
 
 
 def parse_bun_floor(label: str, spec: object, prefix: str = "") -> tuple[int, ...]:
+    # Upstream pins `packageManager` exactly (`bun@1.4.4` since 18.13.0) only to
+    # keep its CI on one Bun; for this build that version is a floor like any
+    # `>=` range, since a newer Bun keeps the security fixes it was raised for.
     if not isinstance(spec, str):
         raise SystemExit(f"upstream release does not declare {label}")
     text = spec.strip().removeprefix(prefix) if prefix else spec.strip()
-    match = re.fullmatch(r">=\s*(\d+(?:\.\d+){0,2})", text)
+    match = re.fullmatch(r"(?:>=\s*)?(\d+(?:\.\d+){0,2})", text)
     if match is None:
         raise SystemExit(f"unrecognised {label} specifier: {spec}")
     return tuple(int(part) for part in match.group(1).split("."))
