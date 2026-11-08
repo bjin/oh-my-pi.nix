@@ -244,11 +244,14 @@
 
       # Upstream pins a nightly in `rust-toolchain.toml` for pi-natives'
       # `#![feature(alloc_error_hook)]` and for cargo's `[unstable]
-      # embed-metadata` in `.cargo/config.toml`. Build with the newest stable
+      # embed-metadata` in `.cargo/config.toml`, and sets
+      # `workspace.package.rust-version` to that nightly's version (`1.101`
+      # since 18.17.0, inherited by `pi-shell`). Build with the newest stable
       # release instead, so the toolchain only moves with this flake's
-      # rust-overlay input rather than with every pin bump upstream, and let
-      # RUSTC_BOOTSTRAP unlock the rustc feature. `embed-metadata` only trims
-      # `target/`; a cargo that predates the key warns about it and carries on.
+      # rust-overlay input rather than with every pin bump upstream:
+      # `RUSTC_BOOTSTRAP` unlocks the rustc feature and `--ignore-rust-version`
+      # bypasses the nightly MSRV check. `embed-metadata` only trims `target/`;
+      # a cargo that predates the key warns about it and carries on.
       rustToolchain = pkgs.rust-bin.stable.latest.minimal;
       rustPlatform = pkgs.makeRustPlatform {
         cargo = rustToolchain;
@@ -316,6 +319,7 @@
 
             CC=${treeSitterCc} RUSTFLAGS="-C target-cpu=${targetCpu}" \
               cargo build --offline --profile ci --package pi-natives \
+                --ignore-rust-version \
                 ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--features wayland-pipewire"} \
                 --target ${rustTarget}
 
