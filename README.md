@@ -55,7 +55,7 @@ nix build .
 ./result/bin/omp --version
 ```
 
-The native addons build with the latest stable Rust rather than the nightly upstream pins, with `RUSTC_BOOTSTRAP` unlocking the unstable features upstream relies on and `--ignore-rust-version` bypassing its nightly `rust-version` floor. Each `-Ctarget-cpu` variant is a derivation of its own (`.#oh-my-pi.nativeAddons.{baseline,modern}`), so changes to the JS build reuse both.
+The native addons build with the latest stable Rust rather than the nightly upstream pins, with `RUSTC_BOOTSTRAP` unlocking the unstable features upstream relies on and `--ignore-rust-version` bypassing its nightly `rust-version` floor. Standard library methods that only the nightly makes `const` cannot be unlocked that way, so `postPatch` drops `const` from the upstream functions that call them. Each `-Ctarget-cpu` variant is a derivation of its own (`.#oh-my-pi.nativeAddons.{baseline,modern}`), so changes to the JS build reuse both.
 
 The source build ships native addons beside the executable rather than extracting an embedded archive into `~/.omp/natives`. Since 18.7.0, the flake disables embedding with `native: null` in upstream's `build-binary.ts`; the previous `embed-native.ts --reset` path no longer exists.
 

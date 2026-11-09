@@ -251,7 +251,9 @@
       # rust-overlay input rather than with every pin bump upstream:
       # `RUSTC_BOOTSTRAP` unlocks the rustc feature and `--ignore-rust-version`
       # bypasses the nightly MSRV check. `embed-metadata` only trims `target/`;
-      # a cargo that predates the key warns about it and carries on.
+      # a cargo that predates the key warns about it and carries on. Library
+      # APIs that only the nightly marks `const` cannot be unlocked that way:
+      # `postPatch` below drops `const` from the few callers that need them.
       rustToolchain = pkgs.rust-bin.stable.latest.minimal;
       rustPlatform = pkgs.makeRustPlatform {
         cargo = rustToolchain;
@@ -274,6 +276,13 @@
               inherit grammars;
             })
           ];
+          # Since 18.18.3 `pi-shell`'s `Vproc::has_work` is a `const fn` calling
+          # `VecDeque::is_empty`, which is `const` only on nightly; every caller
+          # is runtime code, so a plain `fn` is equivalent.
+          postPatch = ''
+            substituteInPlace crates/pi-shell/src/bash/vm/proc.rs \
+              --replace-fail 'pub const fn has_work(' 'pub fn has_work('
+          '';
 
           cargoDeps = rustPlatform.importCargoLock {
             lockFile = ./upstream/Cargo.lock;
