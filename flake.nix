@@ -163,12 +163,14 @@
         test -s "$out/share/zsh/site-functions/_omp"
         test -s "$out/share/fish/vendor_completions.d/omp.fish"
       '';
-      # `pi-voice` dlopens these by bare name, so nothing links them and
-      # autoPatchelf cannot discover them: PulseAudio drives `/live` capture and
-      # ALSA is its fallback device backend.
-      dlopenedAudioLibraries = [
+      # The addon dlopens these by bare name, so nothing links them and
+      # autoPatchelf cannot discover them: `pi-voice` drives `/live` capture
+      # with PulseAudio and falls back to ALSA, and Wayland screen capture
+      # loads `libpipewire-0.3.so.0` on first use.
+      dlopenedLibraries = [
         pkgs.libpulseaudio
         pkgs.alsa-lib
+        pkgs.pipewire
       ];
       useLooseNativeAddons = ''
         # Nix ships native addons as loose .node files next to the compiled
@@ -230,9 +232,9 @@
             "$out/lib/omp/${nativeAddonFile variant}"
         '') nativeAddonVariants
       );
-      addonAudioRunpath = lib.concatStrings (
+      addonDlopenRunpath = lib.concatStrings (
         lib.mapAttrsToList (variant: _: ''
-          patchelf --add-rpath "${lib.makeLibraryPath dlopenedAudioLibraries}" \
+          patchelf --add-rpath "${lib.makeLibraryPath dlopenedLibraries}" \
             "$out/lib/omp/${nativeAddonFile variant}"
         '') nativeAddonVariants
       );
@@ -302,13 +304,7 @@
             pkgs.writableTmpDirAsHomeHook
             rustToolchain
             rustPlatform.cargoSetupHook
-            # `pipewire-sys` and `libspa-sys` generate bindings with libclang; this
-            # hook also provides their Nix libc include flags.
-            rustPlatform.bindgenHook
           ];
-          # `pi-natives`' `wayland-pipewire` feature links system libpipewire
-          # through pkg-config.
-          buildInputs = [ pkgs.pipewire ];
           strictDeps = true;
           dontConfigure = true;
           # CMake belongs to `opusic-sys`, not this derivation's source root.
@@ -329,7 +325,6 @@
             CC=${treeSitterCc} RUSTFLAGS="-C target-cpu=${targetCpu}" \
               cargo build --offline --profile ci --package pi-natives \
                 --ignore-rust-version \
-                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--features wayland-pipewire"} \
                 --target ${rustTarget}
 
             runHook postBuild
@@ -420,8 +415,6 @@
         buildInputs = [
           pkgs.stdenv.cc.cc.lib
           pkgs.zlib
-          # For autoPatchelfHook: the addons link libpipewire (`wayland-pipewire`).
-          pkgs.pipewire
         ];
         strictDeps = true;
         dontConfigure = true;
@@ -473,7 +466,7 @@
 
         preFixup = ''
           ohMyPiPostFixup() {
-            ${addonAudioRunpath}
+            ${addonDlopenRunpath}
             ${installShellCompletions}
           }
           postFixupHooks+=(ohMyPiPostFixup)
@@ -565,11 +558,10 @@
           install -Dm755 "$src" "$out/lib/omp/omp"
           # Release binaries embed a compressed addon that is unpacked into
           # ~/.omp/natives at first start, so its dlopen()s cannot be resolved
-          # with patchelf the way the source build does it. Upstream ships the
-          # addon without the pipewire link, so PulseAudio and ALSA are the only
-          # libraries the loader path has to provide.
+          # with patchelf the way the source build does it; the loader path has
+          # to provide them instead.
           makeWrapper "$out/lib/omp/omp" "$out/bin/omp" \
-            --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath dlopenedAudioLibraries}"
+            --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath dlopenedLibraries}"
 
           runHook postInstall
         '';
