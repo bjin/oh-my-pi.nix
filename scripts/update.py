@@ -179,9 +179,9 @@ def read_json(path: Path) -> dict:
 
 
 def parse_bun_floor(label: str, spec: object, prefix: str = "") -> tuple[int, ...]:
-    # Upstream pins `packageManager` exactly (`bun@1.4.4` since 18.13.0) only to
-    # keep its CI on one Bun; for this build that version is a floor like any
-    # `>=` range, since a newer Bun keeps the security fixes it was raised for.
+    # Either spelling is a floor for this build: a `>=` range, or an exact
+    # version like the `bun@1.4.4` upstream once pinned only to keep its own CI
+    # on one Bun, which a newer Bun clears since it keeps the same fixes.
     if not isinstance(spec, str):
         raise SystemExit(f"upstream release does not declare {label}")
     text = spec.strip().removeprefix(prefix) if prefix else spec.strip()
