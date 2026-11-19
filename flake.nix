@@ -192,7 +192,7 @@
 
       rustTarget = "x86_64-unknown-linux-gnu";
       # Upstream drives the shipping addons through Bazel since 17.1.6, but the
-      # rule (upstream `bazel/defs.bzl`, `crates/pi-natives/BUILD.bazel`) only
+      # rule (upstream `bazel/defs.bzl`, `crates/natives/BUILD.bazel`) only
       # compiles the `pi_natives` cdylib at opt/thin-LTO/cgu=16/strip-symbols —
       # exactly the cargo `ci` profile — with a per-variant `-Ctarget-cpu` floor,
       # then renames it to the loader's canonical filename. Cargo covers that, so
@@ -248,7 +248,7 @@
       # `#![feature(alloc_error_hook)]` and for cargo's `[unstable]
       # embed-metadata` in `.cargo/config.toml`, and sets
       # `workspace.package.rust-version` to that nightly's version (`1.101`
-      # since 18.17.0, inherited by `pi-shell`). Build with the newest stable
+      # since 18.17.0, inherited by `omp-shell`). Build with the newest stable
       # release instead, so the toolchain only moves with this flake's
       # rust-overlay input rather than with every pin bump upstream:
       # `RUSTC_BOOTSTRAP` unlocks the rustc feature and `--ignore-rust-version`
@@ -278,11 +278,11 @@
               inherit grammars;
             })
           ];
-          # Since 18.18.3 `pi-shell`'s `Vproc::has_work` is a `const fn` calling
+          # Since 18.18.3 `omp-shell`'s `Vproc::has_work` is a `const fn` calling
           # `VecDeque::is_empty`, which is `const` only on nightly; every caller
           # is runtime code, so a plain `fn` is equivalent.
           postPatch = ''
-            substituteInPlace crates/pi-shell/src/bash/vm/proc.rs \
+            substituteInPlace crates/shell/src/bash/vm/proc.rs \
               --replace-fail 'pub const fn has_work(' 'pub fn has_work('
           '';
 
@@ -323,7 +323,7 @@
             runHook preBuild
 
             CC=${treeSitterCc} RUSTFLAGS="-C target-cpu=${targetCpu}" \
-              cargo build --offline --profile ci --package pi-natives \
+              cargo build --offline --profile ci --package omp-natives \
                 --ignore-rust-version \
                 --target ${rustTarget}
 

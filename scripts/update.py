@@ -231,7 +231,7 @@ def read_source_version(tree: Path) -> str:
 
 
 def update_grammars(tree: Path) -> None:
-    registry = tree / "crates/pi-ast/src/language/wasm_grammars.rs"
+    registry = tree / "crates/ast/src/language/wasm_grammars.rs"
     with registry.open() as source:
         header = source.readline().rstrip("\n")
     match = re.fullmatch(
